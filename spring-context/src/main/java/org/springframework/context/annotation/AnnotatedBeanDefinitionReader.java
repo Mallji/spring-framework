@@ -309,7 +309,7 @@ public class AnnotatedBeanDefinitionReader {
 		/*
 			注册Bean定义：
 
-				创建一个BeanDefinitionHolder。
+				创建一个BeanDefinitionHolder(包装BeanDefinition)。
 				应用作用域代理模式（如果需要）。
 				最后，使用BeanDefinitionReaderUtils.registerBeanDefinition将bean定义注册到bean工厂。
 		 */
