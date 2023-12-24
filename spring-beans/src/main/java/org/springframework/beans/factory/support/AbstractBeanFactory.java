@@ -239,14 +239,17 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected <T> T doGetBean(
 			String name, @Nullable Class<T> requiredType, @Nullable Object[] args, boolean typeCheckOnly)
 			throws BeansException {
-
+		//用于获取给定bean名称的规范名称。这个过程包括去除bean名称中的任何工厂引用前缀（比如 "&"）和处理内部别名。
 		String beanName = transformedBeanName(name);
 		Object beanInstance;
 
 		// Eagerly check singleton cache for manually registered singletons.
 		Object sharedInstance = getSingleton(beanName);
+		//为什么要保证arg为null???
+		//对于单例bean，一旦实例被创建，它的构造参数就被认为是固定的。如果在后续的请求中传入不同的构造参数，这可能会导致混淆或不一致，因为已经创建的单例实例无法用新的参数重新创建。
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
+				//检查这个beanName所对应的bean是不是正在创建的过程中
 				if (isSingletonCurrentlyInCreation(beanName)) {
 					logger.trace("Returning eagerly cached instance of singleton bean '" + beanName +
 							"' that is not fully initialized yet - a consequence of a circular reference");
@@ -255,6 +258,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					logger.trace("Returning cached instance of singleton bean '" + beanName + "'");
 				}
 			}
+			//获取给定 bean 实例的对象，可以是 bean 实例本身，也可以是它创建的对象（如果是 FactoryBean）。
 			beanInstance = getObjectForBeanInstance(sharedInstance, name, beanName, null);
 		}
 
@@ -269,6 +273,22 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			BeanFactory parentBeanFactory = getParentBeanFactory();
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
 				// Not found -> check parent.
+				/*
+
+				在Spring框架中，originalBeanName(name)方法用于获取给定bean名称的原始名称，这通常涉及去除任何工厂引用前缀（如&符号）。这一步骤在处理bean名称时尤其重要，因为它帮助确保无论用户请求的是普通bean还是工厂bean，都能够正确地解析和处理。
+
+				工厂bean和普通bean
+				工厂bean：在Spring中，工厂bean是一种特殊的bean，它实现了FactoryBean接口。工厂bean的作用是生成其他bean实例，而不是作为直接使用的bean。在bean名称前加上&符号表示引用的是工厂bean本身，而不是它创建的bean。
+				普通bean：普通bean是指普通的Spring管理的对象，它们不是用来生成其他bean的。
+				方法作用
+				去除前缀：originalBeanName(name)方法检查提供的bean名称，并在名称有前缀时去除这个前缀。对于工厂bean，它会去除名称前的&符号，返回工厂bean的实际名称。
+				获取原始名称：这个方法确保无论是请求工厂bean还是它创建的bean，都可以获得正确的、没有前缀的bean名称。
+				应用场景
+				依赖注入：当处理依赖注入时，可能需要根据名称获取bean的定义或实例。这个方法确保了即使在请求工厂bean时，也能够正确地解析名称。
+				处理父子上下文：在有父子上下文的情况下，可能需要通过名称在不同的上下文中查找bean。通过获取原始名称，可以确保正确地在父上下文中查找。
+				总结
+				originalBeanName(name)方法在Spring框架中的作用是确保正确处理bean名称，特别是在涉及工厂bean时。它帮助Spring容器正确地理解和处理用户的请求，无论是对普通bean的直接请求还是对工厂bean的引用请求。这一步是Spring精细管理bean的一个体现，保证了灵活性和准确性。
+				 */
 				String nameToLookup = originalBeanName(name);
 				if (parentBeanFactory instanceof AbstractBeanFactory abf) {
 					return abf.doGetBean(nameToLookup, requiredType, args, typeCheckOnly);
@@ -296,6 +316,32 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				if (requiredType != null) {
 					beanCreation.tag("beanType", requiredType::toString);
 				}
+				/*
+				在Spring框架中，`getMergedLocalBeanDefinition(beanName)` 方法的作用是获取给定名称的bean的`RootBeanDefinition`，这个定义是一个合并后的bean定义，它可能是从多个bean定义来源合并而来的。这一步骤在Spring的bean创建和依赖注入过程中非常关键。让我们详细了解这一过程：
+
+						### Bean定义的合并
+
+						1. **父子Bean定义**：在Spring中，一个bean定义可以继承另一个bean定义。这种机制类似于Java中的类继承。子bean定义可以重写父bean定义的某些属性，同时继承未被重写的属性。
+						2. **合并过程**：`getMergedLocalBeanDefinition(beanName)` 方法负责将子bean定义和其父bean定义合并起来。如果一个bean定义没有父定义，这个方法只是简单地返回原始的`RootBeanDefinition`。
+
+						### RootBeanDefinition
+
+						- **RootBeanDefinition**：这是Spring框架中用于描述bean定义的一个关键类。它包含了创建bean实例所需的所有信息，包括构造函数参数、属性值、作用域信息等。
+
+						### 方法作用和重要性
+
+						1. **完整的Bean信息**：通过合并操作，`RootBeanDefinition` 包含了完整的bean信息，这对于后续的bean创建和依赖注入过程至关重要。
+						2. **支持继承**：这个方法使得bean定义的继承成为可能，提供了更高的配置灵活性。可以定义通用的bean设置，并在特定的bean定义中覆盖或添加特定属性。
+						3. **处理细节隐藏**：对于bean的使用者来说，不需要关心bean定义的继承和合并的细节，这些都由Spring容器内部处理。
+
+						### 应用场景
+
+						在创建一个bean的实例时，Spring容器首先通过`getMergedLocalBeanDefinition(beanName)` 方法获取合并后的`RootBeanDefinition`，然后根据这个定义来创建和配置bean实例。这确保了bean实例的创建符合所有相关的配置，包括通过继承获得的配置。
+
+						### 总结
+
+						`getMergedLocalBeanDefinition(beanName)` 方法在Spring容器中的作用是获取一个完整且合并后的bean定义。这一步骤确保了Spring在创建和配置bean时能够考虑到所有的配置源，包括继承自父bean定义的配置。这是Spring提供高级配置灵活性和强大功能的关键机制之一。
+				 */
 				RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
 				checkMergedBeanDefinition(mbd, beanName, args);
 
@@ -303,13 +349,43 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
 					for (String dep : dependsOn) {
+						//为什么是直接抛出异常,而不是去解决循环依赖?
+						//isDependent()检测是不是因为depends-on属性定义的循环依赖,在Spring中，可以通过depends-on属性显式地指定一个bean在创建之前需要先创建哪些其他bean。.
+						//方法作用：isDependent(beanName, dep)方法检查是否存在这样的情况：当前正在创建的bean（beanName）在其创建过程中依赖于另一个bean（dep），而这个dep又直接或间接地依赖于beanName。
+						/*
+						在Spring框架中，当检测到`depends-on`属性定义的循环依赖时，框架选择直接抛出异常，而不是尝试解决这种循环依赖，原因主要有以下几点：
+
+						### 1. `depends-on`的特殊性
+
+						- **初始化顺序**：`depends-on`属性在Spring中用于明确指定bean初始化的顺序。它告诉容器在初始化当前bean之前先初始化其他指定的bean。
+						- **显式依赖声明**：与构造器或setter注入的隐式依赖不同，`depends-on`是一种显式的依赖声明，它用于处理初始化顺序和其他非直接依赖关系（如静态初始化）。
+
+						### 2. 循环依赖的逻辑问题
+
+						- **破坏初始化顺序**：循环依赖的存在意味着没有明确的创建顺序可以遵循，这与`depends-on`属性的初衷相悖。
+						- **配置错误**：循环依赖通常是配置错误的结果，表示依赖关系设计不当。在这种情况下，最好的做法是修正配置错误，而不是试图通过框架来解决。
+
+						### 3. 保持框架简洁和清晰
+
+						- **避免复杂性**：试图自动解决显式定义的循环依赖将增加框架的复杂性，并可能导致不可预见的行为。
+						- **清晰的责任划分**：通过抛出异常，Spring使责任明确 —— 开发者应该设计合理的依赖关系并避免循环依赖。
+
+						### 4. 鼓励良好的设计实践
+
+						- **设计原则**：Spring鼓励使用依赖注入和松耦合的设计原则。循环依赖通常是紧耦合的标志，可能指示设计上的问题。
+						- **重构和优化**：异常促使开发者重构他们的应用配置，优化bean之间的依赖关系。
+
+						### 总结
+
+						Spring框架中抛出异常以处理`depends-on`属性定义的循环依赖是一种设计选择，旨在保持框架的清晰和简洁，并鼓励开发者遵循良好的设计实践。虽然Spring可以处理某些类型的循环依赖（如通过构造器或setter注入创建的bean），但对于通过`depends-on`属性显式定义的依赖关系，它选择通过明确的异常来提示开发者需要修正配置。
+						*/
 						if (isDependent(beanName, dep)) {
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 									"Circular depends-on relationship between '" + beanName + "' and '" + dep + "'");
 						}
 						registerDependentBean(dep, beanName);
 						try {
-							getBean(dep);
+							getBean(dep);//初始化依赖的bean
 						}
 						catch (NoSuchBeanDefinitionException ex) {
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,

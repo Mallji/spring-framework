@@ -109,7 +109,21 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
 		this();
+		/*
+		This method call registers each provided class as a component in the Spring context.
+		These classes are expected to be annotated with Spring annotations
+		(@Configuration, @Component, etc.),
+		which indicate how they should be processed.
+		Beans defined in these classes will be detected and registered in the application context.
+		 */
 		register(componentClasses);
+		/*
+		This is a crucial step where the application context is refreshed.
+		 This includes initializing all singleton beans,
+		 setting up any necessary infrastructure (like bean factories),
+		 processing annotations, and more.
+		Essentially, this step brings the application context to a fully configured and usable state.
+		 */
 		refresh();
 	}
 

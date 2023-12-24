@@ -574,6 +574,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		return this.applicationListeners;
 	}
 
+		/*
+		This is a crucial step where the application context is refreshed.
+		 This includes initializing all singleton beans,
+		 setting up any necessary infrastructure (like bean factories),
+		 processing annotations, and more.
+		Essentially, this step brings the application context to a fully configured and usable state.
+	 */
 	@Override
 	public void refresh() throws BeansException, IllegalStateException {
 		synchronized (this.startupShutdownMonitor) {
@@ -697,6 +704,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * @see #getBeanFactory()
 	 */
 	protected ConfigurableListableBeanFactory obtainFreshBeanFactory() {
+		// 这里使用了委派设计模式，父类定义了抽象的refreshBeanFactory()方法，具体实现调用子类容器的refreshBeanFactory()方法
 		refreshBeanFactory();
 		return getBeanFactory();
 	}

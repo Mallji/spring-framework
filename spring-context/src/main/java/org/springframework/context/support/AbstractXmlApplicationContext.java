@@ -81,17 +81,38 @@ public abstract class AbstractXmlApplicationContext extends AbstractRefreshableC
 	@Override
 	protected void loadBeanDefinitions(DefaultListableBeanFactory beanFactory) throws BeansException, IOException {
 		// Create a new XmlBeanDefinitionReader for the given BeanFactory.
+		/*
+		This line creates a new instance of XmlBeanDefinitionReader.
+		This reader is responsible for parsing XML files and registering bean definitions with the provided beanFactory.
+		 */
 		XmlBeanDefinitionReader beanDefinitionReader = new XmlBeanDefinitionReader(beanFactory);
 
 		// Configure the bean definition reader with this context's
 		// resource loading environment.
+		/*
+		Configures the bean definition reader with the environment of the application context.
+		The environment encapsulates property sources and profiles that may influence bean definition processing.
+		 */
 		beanDefinitionReader.setEnvironment(getEnvironment());
+		/*
+		Configures the bean definition reader with the environment of the application context. The environment encapsulates property sources and profiles that may influence bean definition processing.
+		 */
 		beanDefinitionReader.setResourceLoader(this);
+		/*
+		Sets an entity resolver for the bean definition reader, which is used for resolving XML entities.
+		 */
 		beanDefinitionReader.setEntityResolver(new ResourceEntityResolver(this));
 
-		// Allow a subclass to provide custom initialization of the reader,
+		// Allow a subclass to provide custom  initialization of the reader,
 		// then proceed with actually loading the bean definitions.
+
+		/*
+		This method can be overridden in subclasses to provide any additional initialization of the reader before the bean definitions are actually loaded. This step is optional and can be used to further customize the bean definition loading process.
+		 */
 		initBeanDefinitionReader(beanDefinitionReader);
+		/*
+		This is the crucial step where the bean definitions are actually loaded into the bean factory. The loadBeanDefinitions method can be overridden in subclasses to specify the source of the bean definitions, like XML configuration files.
+		 */
 		loadBeanDefinitions(beanDefinitionReader);
 	}
 
@@ -121,12 +142,29 @@ public abstract class AbstractXmlApplicationContext extends AbstractRefreshableC
 	 * @see #getResourcePatternResolver
 	 */
 	protected void loadBeanDefinitions(XmlBeanDefinitionReader reader) throws BeansException, IOException {
+		/*
+		This method, loadBeanDefinitions(XmlBeanDefinitionReader reader),
+		is typically implemented in subclasses of AbstractApplicationContext and is responsible for loading bean definitions into the Spring container.
+		 */
+
+
+
+		/*
+		This line gets an array of Resource objects that represent the configuration resources (usually XML files). The method getConfigResources() can be overridden in subclasses to specify the actual resources to be used.
+		 */
 		Resource[] configResources = getConfigResources();
 		if (configResources != null) {
 			reader.loadBeanDefinitions(configResources);
 		}
+
+		/*
+		This line retrieves an array of configuration location strings. These strings typically represent paths to XML configuration files.
+		 */
 		String[] configLocations = getConfigLocations();
 		if (configLocations != null) {
+			/*
+			If there are any configuration locations provided, the method instructs the reader to load bean definitions from these locations.
+			 */
 			reader.loadBeanDefinitions(configLocations);
 		}
 	}
