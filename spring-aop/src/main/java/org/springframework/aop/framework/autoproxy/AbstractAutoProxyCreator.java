@@ -264,6 +264,31 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	@Override
 	public Object getEarlyBeanReference(Object bean, String beanName) {
+		/*
+		这段代码是 `AbstractAutoProxyCreator` 类中的 `getEarlyBeanReference` 方法的实现，它是Spring框架中与AOP（面向切面编程）和代理相关的核心部分之一。下面是对这段代码的详细解释：
+
+			### 方法功能
+			- 这个方法主要用于在Bean创建过程中提供一个“早期引用”，特别是在循环依赖的情况下。在AOP的上下文中，这通常意味着返回Bean的代理。
+
+			### 方法实现
+			1. **获取缓存键**：
+			   - `Object cacheKey = getCacheKey(bean.getClass(), beanName);`
+			   - 这行代码通过调用 `getCacheKey` 方法，根据Bean的类和名称生成一个缓存键。这个键用于在后续处理中标识这个特定的Bean。
+
+			2. **存储早期引用**：
+			   - `this.earlyBeanReferences.put(cacheKey, bean);`
+			   - 这行代码将Bean的早期引用存储在 `earlyBeanReferences` 映射中。这个映射可能用于跟踪已经处理过的Bean，以便在以后可以快速获取它们的引用。
+
+			3. **包装如果必要**：
+			   - `return wrapIfNecessary(bean, beanName, cacheKey);`
+			   - 最后，这行代码调用 `wrapIfNecessary` 方法。这个方法负责检查是否需要为该Bean创建一个代理。如果需要，它会创建并返回代理对象；如果不需要，它会返回原始的Bean实例。
+
+			### 方法作用在AOP和代理中
+			- 在Spring的AOP机制中，`AbstractAutoProxyCreator` 是用于自动创建代理的关键类之一。这个 `getEarlyBeanReference` 方法允许在Bean完全初始化之前创建并返回其代理，这对于解决某些循环依赖问题以及确保AOP逻辑被应用到相应的Bean上是必要的。
+			- 在处理循环依赖时，该方法可以确保即使在依赖注入阶段之前，Bean的代理也已经可用，从而保证了AOP的代理逻辑可以正确应用于相关的Bean上。
+
+			总的来说，这个方法在AOP的上下文中非常关键，它确保了即使在复杂的依赖关系中，代理和相关的AOP逻辑也能被正确地应用到Bean上。
+		 */
 		Object cacheKey = getCacheKey(bean.getClass(), beanName);
 		this.earlyBeanReferences.put(cacheKey, bean);
 		return wrapIfNecessary(bean, beanName, cacheKey);

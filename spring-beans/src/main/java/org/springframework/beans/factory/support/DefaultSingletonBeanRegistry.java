@@ -178,8 +178,54 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
+		/*
+		这段代码是Spring框架中`getSingleton`方法的实现，这个方法用于从Spring的bean容器中获取单例bean。这个方法的实现对于理解Spring如何处理单例bean，尤其是如何解决单例bean的循环依赖问题非常关键。让我们逐步解析这段代码：
+
+		### 方法作用
+
+		- **获取单例对象**：`getSingleton`方法用于从容器中获取指定名称的单例对象。
+		- **处理循环依赖**：它还提供了处理循环依赖的机制，通过允许在bean完全初始化之前提供对该bean的“早期引用”。
+
+		### 代码分析
+
+		1. **一级缓存获取**:
+		   - `Object singletonObject = this.singletonObjects.get(beanName);`
+		   - 首先尝试从`singletonObjects`（一级缓存）中获取bean实例。这个缓存存储已经完全初始化的单例bean。
+
+		2. **检查Bean是否正在创建**:
+		   - `if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) { ... }`
+		   - 如果一级缓存中没有找到，并且当前bean正在创建过程中，代码将尝试从`earlySingletonObjects`（二级缓存）中获取这个bean。
+
+		3. **二级缓存获取**:
+		   - `singletonObject = this.earlySingletonObjects.get(beanName);`
+		   - 二级缓存存储的是提前暴露的bean引用，这些bean还未完全初始化（可能还没有进行依赖注入）。
+
+		4. **早期引用的创建**:
+		   - `if (singletonObject == null && allowEarlyReference) { ... }`
+		   - 如果二级缓存中也没有，并且允许创建早期引用，那么将尝试从`singletonFactories`（三级缓存）中获取一个创建bean的工厂，并从中创建bean。
+
+		5. **三级缓存的使用**:
+		   - `ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);`
+		   - `singletonFactories`存储的是能够生成bean的工厂对象。如果找到了工厂，它会用来生成bean的早期引用，并将这个引用放入二级缓存中。
+
+		6. **同步锁**:
+		   - 为了确保线程安全，对一级、二级缓存和`singletonFactories`的访问是在同步块中进行的。
+
+		### 处理循环依赖
+
+		这个方法在处理循环依赖时尤其重要。当两个或多个bean相互依赖时，它们可能会在对方完全初始化之前就需要对方的引用。`getSingleton`方法通过提前暴露一个bean的引用（从`singletonFactories`到`earlySingletonObjects`）来解决这个问题。
+
+		### 总结
+
+		`getSingleton`方法是Spring框架处理单例bean的核心，特别是在解决循环依赖问题时。通过一级、二级和三级缓存的巧妙使用，Spring能够在保持线程安全的同时，有效地管理bean的生命周期和依赖关系。
+		 */
+
+
+		//解决循环依赖
+		//先从一级缓存中尝试获取
 		// Quick check for existing instance without full singleton lock
 		Object singletonObject = this.singletonObjects.get(beanName);
+		// 若是获取不到而且对象在建立中，则尝试从earlySingletonObjects(二级缓存)中获取
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
 			singletonObject = this.earlySingletonObjects.get(beanName);
 			if (singletonObject == null && allowEarlyReference) {
@@ -192,6 +238,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 							ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 							if (singletonFactory != null) {
 								singletonObject = singletonFactory.getObject();
+								//放入二级缓存
 								this.earlySingletonObjects.put(beanName, singletonObject);
 								this.singletonFactories.remove(beanName);
 							}
@@ -214,7 +261,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	public Object getSingleton(String beanName, ObjectFactory<?> singletonFactory) {
 		Assert.notNull(beanName, "Bean name must not be null");
 		synchronized (this.singletonObjects) {
+			//首先检查一级缓存中是否存在对应的bean
 			Object singletonObject = this.singletonObjects.get(beanName);
+			//如果对象不存在,才需要进行bean的实例化
 			if (singletonObject == null) {
 				if (this.singletonsCurrentlyInDestruction) {
 					throw new BeanCreationNotAllowedException(beanName,
@@ -224,6 +273,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				if (logger.isDebugEnabled()) {
 					logger.debug("Creating shared instance of singleton bean '" + beanName + "'");
 				}
+				//记录当前对象的加载状态
 				beforeSingletonCreation(beanName);
 				boolean newSingleton = false;
 				boolean recordSuppressedExceptions = (this.suppressedExceptions == null);
@@ -231,6 +281,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					this.suppressedExceptions = new LinkedHashSet<>();
 				}
 				try {
+					//开始进行bean对象的创建
 					singletonObject = singletonFactory.getObject();
 					newSingleton = true;
 				}
@@ -254,8 +305,10 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					if (recordSuppressedExceptions) {
 						this.suppressedExceptions = null;
 					}
+					//移除缓存中对该bean的正在加载状态的记录
 					afterSingletonCreation(beanName);
 				}
+				//加入一级缓存
 				if (newSingleton) {
 					addSingleton(beanName, singletonObject);
 				}

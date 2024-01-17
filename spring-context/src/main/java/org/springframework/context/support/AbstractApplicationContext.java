@@ -587,12 +587,21 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			StartupStep contextRefresh = this.applicationStartup.start("spring.context.refresh");
 
 			// Prepare this context for refreshing.
+			//设置容器启动时间,
+			// 设置活跃状态为true
+			//设置关闭状态为false
+			//获取当前的环境Environment对象,并加载当前系统的属性值到Environment对象中
+			//准备监听器和事件的集合对象,默认为空的集合
 			prepareRefresh();
 
 			// Tell the subclass to refresh the internal bean factory.
+			//这行代码调用了obtainFreshBeanFactory方法，其目的是获取一个新的或刷新过的ConfigurableListableBeanFactory实例。
+			//创建了一个DefaultListableBeanFactory
+			//同时加载xml配置文件的属性值到当前工厂中最重要的就是BeanDefinition
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
+			//bean工厂的初始化
 			prepareBeanFactory(beanFactory);
 
 			try {
@@ -601,6 +610,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				StartupStep beanPostProcess = this.applicationStartup.start("spring.context.beans.post-process");
 				// Invoke factory processors registered as beans in the context.
+				//BeanFactoryPostProcessor用来修改BeanDefinition
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
@@ -608,15 +618,18 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				beanPostProcess.end();
 
 				// Initialize message source for this context.
+				//国际化
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
+				//留给子类做扩展
 				onRefresh();
 
 				// Check for listener beans and register them.
+				//注册监听器
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
@@ -667,14 +680,18 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Initialize any placeholder property sources in the context environment.
+		//模板方法
 		initPropertySources();
 
 		// Validate that all properties marked as required are resolvable:
 		// see ConfigurablePropertyResolver#setRequiredProperties
+		//Environment接口很重要
 		getEnvironment().validateRequiredProperties();
 
 		// Store pre-refresh ApplicationListeners...
 		if (this.earlyApplicationListeners == null) {
+			//此时applicationListrners集合为空,为什么要放入一个空集合呢???
+			//方便做扩展实现,Springboot源码里面到这一步集合里面是有东西的
 			this.earlyApplicationListeners = new LinkedHashSet<>(this.applicationListeners);
 		}
 		else {

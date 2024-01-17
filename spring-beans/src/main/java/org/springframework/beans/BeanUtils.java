@@ -207,6 +207,7 @@ public abstract class BeanUtils {
 						argsWithDefaultValues[i] = args[i];
 					}
 				}
+				//通过构造器实例化bean对象
 				return ctor.newInstance(argsWithDefaultValues);
 			}
 		}

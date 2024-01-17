@@ -307,6 +307,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 
 			if (!typeCheckOnly) {
+				//标志当前对象已经被创建
 				markBeanAsCreated(beanName);
 			}
 
@@ -394,34 +395,47 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					}
 				}
 
-				// Create bean instance.
+				// Create bean instance.创建单例bean实例
 				if (mbd.isSingleton()) {
+					//getSingleton方法尝试从单例缓存中获取指定名称的bean实例。如果实例不存在，它会使用提供的lambda表达式创建一个新的实例。
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
+							//如果bean实例在缓存中不存在，createBean方法被调用来创建一个新的bean实例。这包括整个bean的生命周期处理，如实例化、依赖注入、初始化等。
+							//注意这里面(doCreateBean())会进行解决循环依赖的一步,将提前暴露依赖
 							return createBean(beanName, mbd, args);
 						}
 						catch (BeansException ex) {
+							//如果在bean创建过程中发生任何异常（比如依赖注入失败），这些异常会被捕获。在这种情况下，需要进行一些清理工作。
 							// Explicitly remove instance from singleton cache: It might have been put there
 							// eagerly by the creation process, to allow for circular reference resolution.
 							// Also remove any beans that received a temporary reference to the bean.
+							//如果创建过程中出现异常，可能已经有一个部分创建的bean实例被放入了单例缓存中（特别是在处理循环依赖时）。
+							// destroySingleton方法用于从缓存中移除这个实例，以防止后续的bean请求获取到一个不完整的实例。
 							destroySingleton(beanName);
 							throw ex;
 						}
 					});
 					beanInstance = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
 				}
-
+				//创建原型bean
 				else if (mbd.isPrototype()) {
 					// It's a prototype -> create a new instance.
 					Object prototypeInstance = null;
 					try {
+						/*
+						afterPrototypeCreation(beanName)是Spring内部使用的方法，它通常与原型bean的创建相关联。
+						这个方法主要用于管理特定的内部状态，特别是与原型bean的作用域相关的状态。
+						通常，这个方法用于标记原型bean的创建结束，并处理与原型bean作用域相关的内部逻辑。
+						 */
 						beforePrototypeCreation(beanName);
 						prototypeInstance = createBean(beanName, mbd, args);
 					}
 					finally {
 						afterPrototypeCreation(beanName);
 					}
+					//一旦原型bean实例被创建，这行代码将处理并返回实际的bean实例。这可能涉及到解析实际的实例（例如，处理FactoryBeans）。
 					beanInstance = getObjectForBeanInstance(prototypeInstance, name, beanName, mbd);
+
 				}
 
 				else {

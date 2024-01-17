@@ -1,4 +1,4 @@
-package org.springframework.test.mallji.test;
+package test;
 
 import org.springframework.context.annotation.ComponentScan;
 
